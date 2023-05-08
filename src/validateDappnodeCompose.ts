@@ -1,72 +1,17 @@
 import semver from "semver";
-import { Compose, Manifest, ComposeService } from "@dappnode/types";
+import {
+  Compose,
+  Manifest,
+  ComposeService,
+  dockerParams,
+  dockerComposeSafeKeys,
+} from "@dappnode/types";
 
 let aggregatedError: string[];
 
 function err(msg: string): void {
   aggregatedError.push(msg);
 }
-
-const params = {
-  CONTAINER_NAME_PREFIX: "DAppNodePackage-",
-  CONTAINER_CORE_NAME_PREFIX: "DAppNodeCore-",
-  CONTAINER_TOOL_NAME_PREFIX: "DAppNodeTool-",
-  DOCKER_WHITELIST_NETWORKS: ["dncore_network", "dnpublic_network"],
-  DOCKER_WHITELIST_BIND_VOLUMES: [
-    "dappmanager.dnp.dappnode.eth",
-    "wifi.dnp.dappnode.eth",
-    "vpn.dnp.dappnode.eth",
-    "wireguard.dnp.dappnode.eth",
-    "core.dnp.dappnode.eth",
-    "dappnode-exporter.dnp.dappnode.eth",
-    "dms.dnp.dappnode.eth",
-  ],
-  DOCKER_CORE_ALIASES: [
-    "dappmanager.dappnode",
-    "wifi.dappnode",
-    "vpn.dappnode",
-    "wireguard.dappnode",
-    "ipfs.dappnode",
-    "bind.dappnode",
-  ],
-  DNS_SERVICE: "172.33.1.2",
-  MINIMUM_COMPOSE_FILE_VERSION: "3.4",
-};
-
-const composeSafeKeys: (keyof ComposeService)[] = [
-  "cap_add",
-  "cap_drop",
-  "command",
-  "depends_on",
-  "devices",
-  "entrypoint",
-  "environment",
-  "expose",
-  "extra_hosts",
-  "healthcheck",
-  "labels",
-  "logging",
-  "network_mode",
-  "networks",
-  "ports",
-  "privileged",
-  "restart",
-  "stop_grace_period",
-  "stop_signal",
-  "user",
-  "volumes",
-  "working_dir",
-  "security_opt",
-  "image",
-  "build",
-  "volumes",
-  "environment",
-  "pid",
-  "container_name",
-  "dns",
-  "ulimits",
-  "deploy",
-];
 
 /**
  * Validates against custom dappnode docker compose specs.
@@ -109,11 +54,11 @@ function validateComposeVersion(compose: Compose): void {
   if (
     semver.lt(
       compose.version + ".0",
-      params.MINIMUM_COMPOSE_FILE_VERSION + ".0"
+      dockerParams.MINIMUM_COMPOSE_FILE_VERSION + ".0"
     )
   )
     err(
-      `Compose version ${compose.version} is not supported. Minimum version is ${params.MINIMUM_COMPOSE_FILE_VERSION}`
+      `Compose version ${compose.version} is not supported. Minimum version is ${dockerParams.MINIMUM_COMPOSE_FILE_VERSION}`
     );
 }
 
@@ -126,9 +71,9 @@ function validateComposeNetworks(compose: Compose): void {
   if (networks) {
     for (const networkName of Object.keys(networks)) {
       // Check there are only defined whitelisted compose networks
-      if (!params.DOCKER_WHITELIST_NETWORKS.includes(networkName))
+      if (!dockerParams.DOCKER_WHITELIST_NETWORKS.includes(networkName))
         err(
-          `The docker network ${networkName} is not allowed. Only docker networks ${params.DOCKER_WHITELIST_NETWORKS.join(
+          `The docker network ${networkName} is not allowed. Only docker networks ${dockerParams.DOCKER_WHITELIST_NETWORKS.join(
             ","
           )} are allowed`
         );
@@ -152,9 +97,9 @@ function validateComposeService(
   dnpName: string
 ): void {
   for (const serviceKey of Object.keys(compose.services[serviceName])) {
-    if (!composeSafeKeys.includes(serviceKey as keyof ComposeService))
+    if (!dockerComposeSafeKeys.includes(serviceKey as keyof ComposeService))
       err(
-        `service ${serviceName} has key ${serviceKey} that is not allowed. Allowed keys are: ${composeSafeKeys.join(
+        `service ${serviceName} has key ${serviceKey} that is not allowed. Allowed keys are: ${dockerComposeSafeKeys.join(
           ","
         )}`
       );
@@ -164,8 +109,10 @@ function validateComposeService(
     compose.services[serviceName];
 
   // Check that if defined, the DNS must be the one provided from the bind package
-  if (!isCore && dns && !params.DNS_SERVICE.includes(dns))
-    err(`service ${serviceName} has DNS different than ${params.DNS_SERVICE}`);
+  if (!isCore && dns && !dockerParams.DNS_SERVICE.includes(dns))
+    err(
+      `service ${serviceName} has DNS different than ${dockerParams.DNS_SERVICE}`
+    );
 
   // Check compose pid feature can only be used with the format service:*. The pid:host is dangerous
   if (pid && !pid.startsWith("service:"))
@@ -185,7 +132,10 @@ function validateComposeService(
 
   validateComposeServiceNetworks(compose, isCore, serviceName);
 
-  if (volumes && !params.DOCKER_WHITELIST_BIND_VOLUMES.includes(dnpName)) {
+  if (
+    volumes &&
+    !dockerParams.DOCKER_WHITELIST_BIND_VOLUMES.includes(dnpName)
+  ) {
     for (const [i, volume] of volumes.entries()) {
       if (typeof volume !== "string") {
         // https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-3
@@ -208,8 +158,9 @@ function validateComposeServiceNetworks(
   serviceName: string
 ): void {
   const DOCKER_WHITELIST_NETWORKS_STR =
-    params.DOCKER_WHITELIST_NETWORKS.join(",");
-  const DOCKER_WHITELIST_ALIASES_STR = params.DOCKER_CORE_ALIASES.join(",");
+    dockerParams.DOCKER_WHITELIST_NETWORKS.join(",");
+  const DOCKER_WHITELIST_ALIASES_STR =
+    dockerParams.DOCKER_CORE_ALIASES.join(",");
   const service = compose.services[serviceName];
   const serviceNetworks = service.networks;
   if (!serviceNetworks) return;
@@ -217,7 +168,7 @@ function validateComposeServiceNetworks(
   if (Array.isArray(serviceNetworks)) {
     for (const serviceNetwork of serviceNetworks) {
       // Check docker network is whitelisted when defined in array format
-      if (!params.DOCKER_WHITELIST_NETWORKS.includes(serviceNetwork))
+      if (!dockerParams.DOCKER_WHITELIST_NETWORKS.includes(serviceNetwork))
         err(
           `service ${serviceName} has a non-whitelisted docker network: ${serviceNetwork}. Only docker networks ${DOCKER_WHITELIST_NETWORKS_STR} are allowed`
         );
@@ -225,7 +176,11 @@ function validateComposeServiceNetworks(
   } else {
     for (const serviceNetworkObjectName of Object.keys(serviceNetworks)) {
       // Check docker network is whitelisted when defined in object format
-      if (!params.DOCKER_WHITELIST_NETWORKS.includes(serviceNetworkObjectName))
+      if (
+        !dockerParams.DOCKER_WHITELIST_NETWORKS.includes(
+          serviceNetworkObjectName
+        )
+      )
         err(
           `service ${serviceName} has a non-whitelisted docker network: ${serviceNetworkObjectName}. Only docker networks ${DOCKER_WHITELIST_NETWORKS_STR} are allowed`
         );
@@ -235,7 +190,7 @@ function validateComposeServiceNetworks(
       if (
         !isCore &&
         aliases &&
-        params.DOCKER_CORE_ALIASES.some((coreAlias) =>
+        dockerParams.DOCKER_CORE_ALIASES.some((coreAlias) =>
           aliases.includes(coreAlias)
         )
       ) {
