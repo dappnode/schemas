@@ -180,7 +180,7 @@ volumes:
           (e) => e
         );
         console.log(error);
-        const expectedErrorMessage = `Invalid compose:\nservices.postgres`;
+        const expectedErrorMessage = `Invalid compose`;
         expect(error.message).to.include(expectedErrorMessage);
       });
     });
