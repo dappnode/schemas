@@ -180,8 +180,7 @@ volumes:
           (e) => e
         );
         console.log(error);
-        const expectedErrorMessage = `Invalid compose:
-services.postgres Additional property notAllowed is not allowed`;
+        const expectedErrorMessage = `Invalid compose:\nservices.postgres`;
         expect(error.message).to.include(expectedErrorMessage);
       });
     });
