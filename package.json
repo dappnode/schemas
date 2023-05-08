@@ -64,7 +64,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@dappnode/types": "^0.1.7",
+    "@dappnode/types": "^0.1.8",
     "ajv": "^8.12.0",
     "ajv-errors": "^3.0.0",
     "semver": "^7.5.0"
