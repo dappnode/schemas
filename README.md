@@ -13,7 +13,7 @@ npm install @dappnode/schemas
 
 ## Usage
 
-To utilize the shared types, utility functions, parameters, and JSON schemas in your project, simply import them as needed:
+To utilize the validation functions for the JSON schemas:
 
 ```typescript
 import {
