@@ -26,31 +26,41 @@ jobs:
       - name: Compare versions
         run: |
           current_version=$(node -p "require('./package.json').version")
-          published_version=$(npm view @dappnode/schemas version)
+          published_version=$(npm view @dappnode/types version)
           if [ "$(printf '%s\n' "$published_version" "$current_version" | sort -V | head -n1)" != "$published_version" ]; then
             echo "No release required"
-            exit 0
+            echo "SHOULD_CONTINUE=false" >> $GITHUB_ENV
+          else
+            echo "SHOULD_CONTINUE=true" >> $GITHUB_ENV
           fi
+        shell: bash
 
       - name: Lint
+        if: env.SHOULD_CONTINUE == 'true'
         run: npm run lint
 
       - name: Run tests
+        if: env.SHOULD_CONTINUE == 'true'
         run: npm run test
 
       - name: Build webpack # release with webpack bundle
+        if: env.SHOULD_CONTINUE == 'true'
         run: npm run build:webpack
 
+      - name: Get tag name
+        run: echo "TAG_NAME=v$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
       - name: Create GitHub release
-        id: gh_release
+        if: env.SHOULD_CONTINUE == 'true'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.TAG_NAME }}
 
       - name: Publish to npm registry
+        if: env.SHOULD_CONTINUE == 'true'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
