@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dappnode/types.git"
+    "url": "git+https://github.com/dappnode/schemas.git"
   },
   "keywords": [
     "schemas",
