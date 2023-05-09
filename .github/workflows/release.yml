@@ -63,7 +63,8 @@ jobs:
       - name: Publish to npm registry
         if: env.SHOULD_CONTINUE == 'true'
         run: |
-          npm login --registry=https://registry.npmjs.org/ --scope=@dappnode --always-auth --auth-type=oauth --oauth-token=${{ secrets.NPM_TOKEN }}
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          token: ${{ secrets.NPM_TOKEN }}
