@@ -118,8 +118,13 @@ function validateComposeService(
   if (pid && !pid.startsWith("service:"))
     err(`service ${serviceName} has PID feature differnet than service:*`);
 
-  // Check only core packages cand be privileged
-  if (!isCore && privileged && privileged === true)
+  // Check only core packages or exporter cand be privileged
+  if (
+    dnpName !== "dappnode-exporter.dnp.dappnode.eth" &&
+    !isCore &&
+    privileged &&
+    privileged === true
+  )
     err(
       `service ${serviceName} has privileged as true but is not a core package`
     );
